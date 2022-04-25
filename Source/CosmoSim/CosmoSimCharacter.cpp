@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ACosmoSimCharacter
@@ -49,6 +50,14 @@ ACosmoSimCharacter::ACosmoSimCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	JumpFlyStateCounter = 0;
+	IsBoostActive = false;
+}
+
+void ACosmoSimCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,9 +67,10 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACosmoSimCharacter::ActivateBoostMode);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-
+	PlayerInputComponent->BindAction("Turbo", IE_Pressed, this, &ACosmoSimCharacter::ActivateTurboMode);
+	
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ACosmoSimCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ACosmoSimCharacter::MoveRight);
 
@@ -75,6 +85,105 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ACosmoSimCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ACosmoSimCharacter::TouchStopped);
+}
+
+void ACosmoSimCharacter::ActivateBoostMode()
+{
+	switch (JumpFlyStateCounter)
+	{
+	case 0:
+		{
+			Super::Jump();
+			JumpFlyStateCounter = 1;
+			
+			break;
+		}
+	case 1:
+		{
+			if(GetCharacterMovement()->IsFalling())
+			{
+				SetBoostState(true);
+
+				auto ForwardVector = GetCapsuleComponent()->GetForwardVector();
+				UKismetMathLibrary::Vector_Normalize(ForwardVector, 0.0001);
+				UKismetMathLibrary::Multiply_VectorFloat(ForwardVector, 300);
+				UKismetMathLibrary::Add_VectorVector(ForwardVector, {0,0,400});
+				
+				Super::LaunchCharacter(ForwardVector,false, false);
+
+				GetWorld()->GetTimerManager().SetTimer(FlyingModeTimerHandle, [this]()
+				{
+					GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+				}, 0.1,false);
+				
+				JumpFlyStateCounter = 2;
+			}
+			else
+			{
+				JumpFlyStateCounter = 0;
+			}
+
+			break;
+		}
+	case 2:
+		{
+			if(GetCharacterMovement()->IsFlying())
+			{
+				SetBoostState(false);
+				
+				GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+				JumpFlyStateCounter = 0;
+			}
+
+			break;
+		}
+	default:
+		break;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("JUMP STATE IS - %d"), JumpFlyStateCounter );
+}
+
+void ACosmoSimCharacter::ActivateTurboMode()
+{
+	if(!IsTurboActive)
+	{
+		SetTurboState(true);
+		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		bUseControllerRotationPitch = true;
+		bUseControllerRotationYaw = true;
+
+		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
+	}
+	else
+	{
+		SetTurboState(false);
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		bUseControllerRotationPitch = false;
+		bUseControllerRotationYaw = false;
+		SetActorRotation(FRotator{0,0,0});
+		
+		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
+	}
+		
+}
+
+void ACosmoSimCharacter::SetOrientRotationByController(const bool IsOrientByController)
+{
+	bUseControllerRotationYaw = IsOrientByController;
+	GetCharacterMovement()->bOrientRotationToMovement = !IsOrientByController;
+}
+
+void ACosmoSimCharacter::SetBoostState(const bool InState)
+{
+	IsBoostActive = InState;
+
+	SetOrientRotationByController(InState);
+}
+
+void ACosmoSimCharacter::SetTurboState(const bool InState)
+{
+	IsTurboActive = InState;
 }
 
 void ACosmoSimCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -99,17 +208,33 @@ void ACosmoSimCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 }
 
+void ACosmoSimCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	LandedDelegate.AddDynamic(this, &ACosmoSimCharacter::OnLandedEvent);
+}
+
 void ACosmoSimCharacter::MoveForward(float Value)
 {
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		if(IsTurboActive)
+		{
+			// get forward vector
+			const FVector Direction =  FollowCamera->GetForwardVector();
+			AddMovementInput(Direction, Value);
+		}
+		else
+		{
+			// find out which way is forward
+			const FRotator Rotation = Controller->GetControlRotation();
+			const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		// get forward vector
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(Direction, Value);
+			// get forward vector
+			const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+			AddMovementInput(Direction, Value);
+		}
 	}
 }
 
@@ -126,4 +251,10 @@ void ACosmoSimCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
+
+void ACosmoSimCharacter::OnLandedEvent(const FHitResult& Hit)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("OnLanded!"));
+	JumpFlyStateCounter = 0;
 }

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "CosmoSimCharacter.generated.h"
 
+
 UCLASS(config=Game)
 class ACosmoSimCharacter : public ACharacter
 {
@@ -21,12 +22,15 @@ class ACosmoSimCharacter : public ACharacter
 public:
 	ACosmoSimCharacter();
 
+	virtual void Tick(float DeltaTime) override;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Input)
 	float TurnRateGamepad;
 
 protected:
-
+	virtual void BeginPlay() override;
+	
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
 
@@ -51,15 +55,35 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
-protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+	private:
+	int32 JumpFlyStateCounter;
+	FTimerHandle FlyingModeTimerHandle;
+
+	bool IsBoostActive;
+	bool IsTurboActive;
 
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+private:
+	void ActivateBoostMode();
+	void ActivateTurboMode();
+
+	void SetOrientRotationByController(const bool IsOrientByController);
+	
+	void SetBoostState(const bool InState);
+	void SetTurboState(const bool InState);
+
+	UFUNCTION()
+	void OnLandedEvent(const FHitResult& Hit);
 };
+
+
 
