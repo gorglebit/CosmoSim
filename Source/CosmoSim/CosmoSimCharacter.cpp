@@ -219,6 +219,8 @@ void ACosmoSimCharacter::MoveForward(float Value)
 {
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
+		MovementUnitVector2D.Y = Value;
+		
 		if(IsTurboActive)
 		{
 			// get forward vector
@@ -242,6 +244,8 @@ void ACosmoSimCharacter::MoveRight(float Value)
 {
 	if ( (Controller != nullptr) && (Value != 0.0f) )
 	{
+		MovementUnitVector2D.X = Value;
+		
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);

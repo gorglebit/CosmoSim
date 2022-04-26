@@ -59,6 +59,9 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FVector2D MovementUnitVector2D;
+
 	private:
 	int32 JumpFlyStateCounter;
 	FTimerHandle FlyingModeTimerHandle;
