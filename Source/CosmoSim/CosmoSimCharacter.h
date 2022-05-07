@@ -62,12 +62,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D MovementUnitVector2D;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsBoostActive;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsTurboActive;
+	
 	private:
+	const float BoostBraking = 1.5;
 	int32 JumpFlyStateCounter;
 	FTimerHandle FlyingModeTimerHandle;
-
-	bool IsBoostActive;
-	bool IsTurboActive;
 
 public:
 	/** Returns CameraBoom subobject **/

@@ -58,11 +58,12 @@ ACosmoSimCharacter::ACosmoSimCharacter()
 void ACosmoSimCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	//UE_LOG(LogTemp, Warning, TEXT("Input vector is  - %f , %f"), MovementUnitVector2D.X, MovementUnitVector2D.Y );
+	//UE_LOG(LogTemp, Warning, TEXT("Is boost active  - %d"), IsBoostActive );
 }
-
 //////////////////////////////////////////////////////////////////////////
-// Input
 
+// Input
 void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -89,6 +90,8 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 void ACosmoSimCharacter::ActivateBoostMode()
 {
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	
 	switch (JumpFlyStateCounter)
 	{
 	case 0:
@@ -100,22 +103,17 @@ void ACosmoSimCharacter::ActivateBoostMode()
 		}
 	case 1:
 		{
-			if(GetCharacterMovement()->IsFalling())
+			if(MovementComponent->IsFalling())
 			{
 				SetBoostState(true);
 
-				auto ForwardVector = GetCapsuleComponent()->GetForwardVector();
-				UKismetMathLibrary::Vector_Normalize(ForwardVector, 0.0001);
-				UKismetMathLibrary::Multiply_VectorFloat(ForwardVector, 300);
-				UKismetMathLibrary::Add_VectorVector(ForwardVector, {0,0,400});
+				MovementComponent->SetMovementMode(MOVE_Flying);
 				
-				Super::LaunchCharacter(ForwardVector,false, false);
+				MovementComponent->Velocity = {
+					MovementComponent->Velocity.X / BoostBraking,
+					MovementComponent->Velocity.Y / BoostBraking,
+					0};
 
-				GetWorld()->GetTimerManager().SetTimer(FlyingModeTimerHandle, [this]()
-				{
-					GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-				}, 0.1,false);
-				
 				JumpFlyStateCounter = 2;
 			}
 			else
@@ -127,11 +125,11 @@ void ACosmoSimCharacter::ActivateBoostMode()
 		}
 	case 2:
 		{
-			if(GetCharacterMovement()->IsFlying())
+			if(MovementComponent->IsFlying())
 			{
 				SetBoostState(false);
 				
-				GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+				MovementComponent->SetMovementMode(MOVE_Falling);
 				JumpFlyStateCounter = 0;
 			}
 
@@ -217,10 +215,10 @@ void ACosmoSimCharacter::BeginPlay()
 
 void ACosmoSimCharacter::MoveForward(float Value)
 {
+	MovementUnitVector2D.Y = Value;
+	
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
-		MovementUnitVector2D.Y = Value;
-		
 		if(IsTurboActive)
 		{
 			// get forward vector
@@ -242,10 +240,10 @@ void ACosmoSimCharacter::MoveForward(float Value)
 
 void ACosmoSimCharacter::MoveRight(float Value)
 {
+	MovementUnitVector2D.X = Value;
+	
 	if ( (Controller != nullptr) && (Value != 0.0f) )
 	{
-		MovementUnitVector2D.X = Value;
-		
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -261,4 +259,6 @@ void ACosmoSimCharacter::OnLandedEvent(const FHitResult& Hit)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("OnLanded!"));
 	JumpFlyStateCounter = 0;
+
+	SetBoostState(false);
 }
