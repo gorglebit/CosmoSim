@@ -120,6 +120,7 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 void ACosmoSimCharacter::ActivateBoostMode()
 {
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if(!MovementComponent) return;
 	
 	switch (JumpFlyStateCounter)
 	{
@@ -173,26 +174,25 @@ void ACosmoSimCharacter::ActivateBoostMode()
 
 void ACosmoSimCharacter::ActivateTurboMode()
 {
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if(!MovementComponent) return;
+	
 	if(!IsTurboActive)
 	{
 		SetTurboState(true);
-		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-		bUseControllerRotationPitch = true;
-		bUseControllerRotationYaw = true;
+		MovementComponent->SetMovementMode(MOVE_Flying);
+		MovementComponent->MaxFlySpeed = 800;
 
 		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
 	}
 	else
 	{
 		SetTurboState(false);
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		bUseControllerRotationPitch = false;
-		bUseControllerRotationYaw = false;
-		SetActorRotation(FRotator{0,0,0});
+		MovementComponent->SetMovementMode(MOVE_Walking);
+		MovementComponent->MaxFlySpeed = 600;
 		
 		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
 	}
-		
 }
 
 void ACosmoSimCharacter::SetOrientRotationByController(const bool IsOrientByController)
@@ -211,6 +211,8 @@ void ACosmoSimCharacter::SetBoostState(const bool InState)
 void ACosmoSimCharacter::SetTurboState(const bool InState)
 {
 	IsTurboActive = InState;
+
+	SetOrientRotationByController(InState);
 }
 
 void ACosmoSimCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -245,24 +247,27 @@ void ACosmoSimCharacter::BeginPlay()
 void ACosmoSimCharacter::MoveForward(float Value)
 {
 	MovementUnitVector2D.Y = Value;
-	
-	if ((Controller != nullptr) && (Value != 0.0f))
+
+	if (Controller != nullptr)
 	{
 		if(IsTurboActive)
 		{
 			// get forward vector
 			const FVector Direction =  FollowCamera->GetForwardVector();
-			AddMovementInput(Direction, Value);
+			AddMovementInput(Direction, 1);
 		}
 		else
 		{
-			// find out which way is forward
-			const FRotator Rotation = Controller->GetControlRotation();
-			const FRotator YawRotation(0, Rotation.Yaw, 0);
+			if (Value != 0.0f)
+			{
+				// find out which way is forward
+				const FRotator Rotation = Controller->GetControlRotation();
+				const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-			// get forward vector
-			const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-			AddMovementInput(Direction, Value);
+				// get forward vector
+				const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+				AddMovementInput(Direction, Value);
+			}
 		}
 	}
 }
@@ -270,7 +275,9 @@ void ACosmoSimCharacter::MoveForward(float Value)
 void ACosmoSimCharacter::MoveRight(float Value)
 {
 	MovementUnitVector2D.X = Value;
-	
+
+	if(IsTurboActive) return;
+		
 	if ( (Controller != nullptr) && (Value != 0.0f) )
 	{
 		// find out which way is right
