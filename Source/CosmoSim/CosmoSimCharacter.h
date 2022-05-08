@@ -67,6 +67,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool IsTurboActive;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsAimActive;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float AimPitchY;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float AimYawZ;
 	
 	private:
 	const float BoostBraking = 1.5;

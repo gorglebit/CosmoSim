@@ -58,8 +58,37 @@ ACosmoSimCharacter::ACosmoSimCharacter()
 void ACosmoSimCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Set AimPitchY, value for aimOffset
+	auto SetAimPitch = [this]()
+	{
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
+			AimPitchY = UKismetMathLibrary::Clamp(TargetRotator.Pitch, -90, 90);
+		}
+	};
+
+	SetAimPitch();
+	//----------------
+
+	// Set AimYawZ, value for aimOffset;
+	auto SetAimYaw = [this]()
+	{
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
+			AimYawZ	= UKismetMathLibrary::Clamp(TargetRotator.Yaw, -90, 90);
+		}
+	};
+
+	SetAimYaw();
+	//------------------
+
+	
 	//UE_LOG(LogTemp, Warning, TEXT("Input vector is  - %f , %f"), MovementUnitVector2D.X, MovementUnitVector2D.Y );
 	//UE_LOG(LogTemp, Warning, TEXT("Is boost active  - %d"), IsBoostActive );
+	
 }
 //////////////////////////////////////////////////////////////////////////
 
