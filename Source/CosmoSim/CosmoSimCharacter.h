@@ -76,6 +76,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float AimYawZ;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float MouseInputX;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float MouseInputY;
 	
 	private:
 	const float BoostBraking = 1.5;

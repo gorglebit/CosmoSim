@@ -59,9 +59,11 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Set AimPitchY, value for aimOffset
+	// Set Aim PitchY and Set AimYawZ value for AimOffset
 	auto SetAimPitch = [this]()
 	{
+		if(IsBoostActive || IsTurboActive) return;
+			
 		if (GetLocalRole() == ROLE_Authority)
 		{
 			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
@@ -70,11 +72,11 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 	};
 
 	SetAimPitch();
-	//----------------
-
-	// Set AimYawZ, value for aimOffset;
+	
 	auto SetAimYaw = [this]()
 	{
+		if(IsBoostActive || IsTurboActive) return;
+		
 		if (GetLocalRole() == ROLE_Authority)
 		{
 			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
@@ -85,6 +87,25 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 	SetAimYaw();
 	//------------------
 
+	// Set MouseInputX and MouseInputY value for TurboLocomotion blendspace
+	auto SetMouseXInput = [this]()
+	{
+		//if(!IsTurboActive) return;
+		
+		MouseInputX = UKismetMathLibrary::Clamp((GetInputAxisValue("Turn Right / Left Mouse") * 10), -1, 1);
+	};
+
+	SetMouseXInput();
+
+	auto SetMouseYInput = [this]()
+	{
+		if(!IsTurboActive) return;
+		
+		MouseInputY = UKismetMathLibrary::Clamp((GetInputAxisValue("Look Up / Down Mouse") * 10), -1, 1);  
+	};
+
+	SetMouseYInput();
+	//-----------------
 	
 	//UE_LOG(LogTemp, Warning, TEXT("Input vector is  - %f , %f"), MovementUnitVector2D.X, MovementUnitVector2D.Y );
 	//UE_LOG(LogTemp, Warning, TEXT("Is boost active  - %d"), IsBoostActive );
