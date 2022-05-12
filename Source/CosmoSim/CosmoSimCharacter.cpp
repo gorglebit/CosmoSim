@@ -45,13 +45,13 @@ ACosmoSimCharacter::ACosmoSimCharacter()
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	// Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-	JumpFlyStateCounter = 0;
 	IsBoostActive = false;
 }
 
@@ -62,25 +62,27 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 	// Set Aim PitchY and Set AimYawZ value for AimOffset
 	auto SetAimPitch = [this]()
 	{
-		if(IsBoostActive || IsTurboActive) return;
-			
+		if (IsBoostActive || IsTurboActive) return;
+
 		if (GetLocalRole() == ROLE_Authority)
 		{
-			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
+			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(
+				GetControlRotation(), GetActorRotation());
 			AimPitchY = UKismetMathLibrary::Clamp(TargetRotator.Pitch, -90, 90);
 		}
 	};
 
 	SetAimPitch();
-	
+
 	auto SetAimYaw = [this]()
 	{
-		if(IsBoostActive || IsTurboActive) return;
-		
+		if (IsBoostActive || IsTurboActive) return;
+
 		if (GetLocalRole() == ROLE_Authority)
 		{
-			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(GetControlRotation(), GetActorRotation());
-			AimYawZ	= UKismetMathLibrary::Clamp(TargetRotator.Yaw, -90, 90);
+			const FRotator TargetRotator = UKismetMathLibrary::NormalizedDeltaRotator(
+				GetControlRotation(), GetActorRotation());
+			AimYawZ = UKismetMathLibrary::Clamp(TargetRotator.Yaw, -90, 90);
 		}
 	};
 
@@ -91,7 +93,7 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 	auto SetMouseXInput = [this]()
 	{
 		//if(!IsTurboActive) return;
-		
+
 		MouseInputX = UKismetMathLibrary::Clamp((GetInputAxisValue("Turn Right / Left Mouse") * 10), -1, 1);
 	};
 
@@ -99,18 +101,18 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 
 	auto SetMouseYInput = [this]()
 	{
-		if(!IsTurboActive) return;
-		
-		MouseInputY = UKismetMathLibrary::Clamp((GetInputAxisValue("Look Up / Down Mouse") * 10), -1, 1);  
+		if (!IsTurboActive) return;
+
+		MouseInputY = UKismetMathLibrary::Clamp((GetInputAxisValue("Look Up / Down Mouse") * 10), -1, 1);
 	};
 
 	SetMouseYInput();
 	//-----------------
-	
+
 	//UE_LOG(LogTemp, Warning, TEXT("Input vector is  - %f , %f"), MovementUnitVector2D.X, MovementUnitVector2D.Y );
 	//UE_LOG(LogTemp, Warning, TEXT("Is boost active  - %d"), IsBoostActive );
-	
 }
+
 //////////////////////////////////////////////////////////////////////////
 
 // Input
@@ -118,10 +120,10 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACosmoSimCharacter::ActivateBoostMode);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("Turbo", IE_Pressed, this, &ACosmoSimCharacter::ActivateTurboMode);
-	
+	PlayerInputComponent->BindAction("Jump / Boost", IE_Pressed, this, &ACosmoSimCharacter::JumpBoostAction);
+	PlayerInputComponent->BindAction("Jump / Boost", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Turbo", IE_Pressed, this, &ACosmoSimCharacter::TurboModeAction);
+
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ACosmoSimCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ACosmoSimCharacter::MoveRight);
 
@@ -138,81 +140,109 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindTouch(IE_Released, this, &ACosmoSimCharacter::TouchStopped);
 }
 
-void ACosmoSimCharacter::ActivateBoostMode()
+void ACosmoSimCharacter::SetBoostModeActive(const bool State)
 {
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
-	if(!MovementComponent) return;
-	
-	switch (JumpFlyStateCounter)
+	if (!MovementComponent) return;
+
+	if (State)
 	{
-	case 0:
+		if(IsTurboActive)
 		{
-			Super::Jump();
-			JumpFlyStateCounter = 1;
-			
-			break;
+			SetTurboModeActive(false);
 		}
-	case 1:
+		
+		if (MovementComponent->IsFalling() && !MovementComponent->IsFlying())
 		{
-			if(MovementComponent->IsFalling())
-			{
-				SetBoostState(true);
+			IsBoostActive = State;
+			SetOrientRotationByController(IsBoostActive);
 
-				MovementComponent->SetMovementMode(MOVE_Flying);
-				
-				MovementComponent->Velocity = {
-					MovementComponent->Velocity.X / BoostBraking,
-					MovementComponent->Velocity.Y / BoostBraking,
-					0};
+			MovementComponent->SetMovementMode(MOVE_Flying);
 
-				JumpFlyStateCounter = 2;
-			}
-			else
-			{
-				JumpFlyStateCounter = 0;
-			}
-
-			break;
+			MovementComponent->Velocity = {
+				MovementComponent->Velocity.X / BoostBraking,
+				MovementComponent->Velocity.Y / BoostBraking,
+				0
+			};
 		}
-	case 2:
-		{
-			if(MovementComponent->IsFlying())
-			{
-				SetBoostState(false);
-				
-				MovementComponent->SetMovementMode(MOVE_Falling);
-				JumpFlyStateCounter = 0;
-			}
-
-			break;
-		}
-	default:
-		break;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("JUMP STATE IS - %d"), JumpFlyStateCounter );
-}
-
-void ACosmoSimCharacter::ActivateTurboMode()
-{
-	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
-	if(!MovementComponent) return;
-	
-	if(!IsTurboActive)
-	{
-		SetTurboState(true);
-		MovementComponent->SetMovementMode(MOVE_Flying);
-		MovementComponent->MaxFlySpeed = 800;
-
-		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
 	}
 	else
 	{
-		SetTurboState(false);
+		if (MovementComponent->IsFlying())
+		{
+			IsBoostActive = State;
+			SetOrientRotationByController(IsBoostActive);
+
+			MovementComponent->SetMovementMode(MOVE_Falling);
+		}
+	}
+}
+
+void ACosmoSimCharacter::SetTurboModeActive(const bool State)
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent) return;
+	
+	if (State)
+	{
+		if(IsBoostActive)
+		{
+			SetBoostModeActive(false);
+		}
+		
+		IsTurboActive = State;
+		SetOrientRotationByController(IsTurboActive);
+		
+		MovementComponent->SetMovementMode(MOVE_Flying);
+		MovementComponent->MaxFlySpeed = 800;
+
+		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive);
+	}
+	else
+	{
+		IsTurboActive = State;
+		SetOrientRotationByController(IsTurboActive);
+		
 		MovementComponent->SetMovementMode(MOVE_Walking);
 		MovementComponent->MaxFlySpeed = 600;
-		
-		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive );
+
+		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive);
+	}
+}
+
+void ACosmoSimCharacter::JumpBoostAction()
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent) return;
+
+	if (MovementComponent->IsWalking() && !MovementComponent->IsFalling())
+	{
+		Super::Jump();
+		return;
+	}
+
+	if (IsBoostActive)
+	{
+		SetBoostModeActive(false);
+	}
+	else
+	{
+		SetBoostModeActive(true);
+	}
+}
+
+void ACosmoSimCharacter::TurboModeAction()
+{
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent) return;
+
+	if (IsTurboActive)
+	{
+		SetTurboModeActive(false);
+	}
+	else
+	{
+		SetTurboModeActive(true);
 	}
 }
 
@@ -220,20 +250,6 @@ void ACosmoSimCharacter::SetOrientRotationByController(const bool IsOrientByCont
 {
 	bUseControllerRotationYaw = IsOrientByController;
 	GetCharacterMovement()->bOrientRotationToMovement = !IsOrientByController;
-}
-
-void ACosmoSimCharacter::SetBoostState(const bool InState)
-{
-	IsBoostActive = InState;
-
-	SetOrientRotationByController(InState);
-}
-
-void ACosmoSimCharacter::SetTurboState(const bool InState)
-{
-	IsTurboActive = InState;
-
-	SetOrientRotationByController(InState);
 }
 
 void ACosmoSimCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -271,10 +287,10 @@ void ACosmoSimCharacter::MoveForward(float Value)
 
 	if (Controller != nullptr)
 	{
-		if(IsTurboActive)
+		if (IsTurboActive)
 		{
 			// get forward vector
-			const FVector Direction =  FollowCamera->GetForwardVector();
+			const FVector Direction = FollowCamera->GetForwardVector();
 			AddMovementInput(Direction, 1);
 		}
 		else
@@ -297,14 +313,14 @@ void ACosmoSimCharacter::MoveRight(float Value)
 {
 	MovementUnitVector2D.X = Value;
 
-	if(IsTurboActive) return;
-		
-	if ( (Controller != nullptr) && (Value != 0.0f) )
+	if (IsTurboActive) return;
+
+	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-	
+
 		// get right vector 
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		// add movement in that direction
@@ -315,7 +331,5 @@ void ACosmoSimCharacter::MoveRight(float Value)
 void ACosmoSimCharacter::OnLandedEvent(const FHitResult& Hit)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("OnLanded!"));
-	JumpFlyStateCounter = 0;
-
-	SetBoostState(false);
+	//JumpFlyStateCounter = 0;
 }

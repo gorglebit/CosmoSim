@@ -85,7 +85,6 @@ protected:
 	
 	private:
 	const float BoostBraking = 1.5;
-	int32 JumpFlyStateCounter;
 	FTimerHandle FlyingModeTimerHandle;
 
 public:
@@ -95,13 +94,12 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
-	void ActivateBoostMode();
-	void ActivateTurboMode();
+	void SetBoostModeActive(const bool State);
+	void SetTurboModeActive(const bool State);
+	void JumpBoostAction();
+	void TurboModeAction();
 
 	void SetOrientRotationByController(const bool IsOrientByController);
-	
-	void SetBoostState(const bool InState);
-	void SetTurboState(const bool InState);
 
 	UFUNCTION()
 	void OnLandedEvent(const FHitResult& Hit);
