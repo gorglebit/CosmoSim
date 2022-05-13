@@ -52,6 +52,8 @@ ACosmoSimCharacter::ACosmoSimCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
+	IsTurboActive = false;
+	IsBoostActive = false;
 	IsBoostActive = false;
 }
 
@@ -109,6 +111,8 @@ void ACosmoSimCharacter::Tick(float DeltaTime)
 	SetMouseYInput();
 	//-----------------
 
+	SetGetUpAnimMontage();
+	
 	//UE_LOG(LogTemp, Warning, TEXT("Input vector is  - %f , %f"), MovementUnitVector2D.X, MovementUnitVector2D.Y );
 	//UE_LOG(LogTemp, Warning, TEXT("Is boost active  - %d"), IsBoostActive );
 }
@@ -138,6 +142,31 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ACosmoSimCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ACosmoSimCharacter::TouchStopped);
+}
+
+void ACosmoSimCharacter::SetGetUpAnimMontage_Implementation()
+{
+	
+}
+
+void ACosmoSimCharacter::GetUp_Implementation()
+{
+	
+}
+
+void ACosmoSimCharacter::StartRagdoll()
+{
+	USkeletalMeshComponent* MeshComponent = GetMesh();
+
+	IsRagdollActive = true;
+	MeshComponent->SetSimulatePhysics(true);
+	MeshComponent->SetCollisionProfileName("Ragdoll", true);
+
+	if(IsTurboActive)
+		SetTurboModeActive(false);
+
+	if(IsBoostActive)
+		SetBoostModeActive(false);
 }
 
 void ACosmoSimCharacter::SetBoostModeActive(const bool State)
@@ -246,6 +275,24 @@ void ACosmoSimCharacter::TurboModeAction()
 	}
 }
 
+void ACosmoSimCharacter::GetUpWhenMove()
+{
+	float AxisY = GetInputAxisValue("Move Forward / Backward");
+
+	float AxisX = GetInputAxisValue("Move Right / Left");
+	
+	const float VelocityLength = UKismetMathLibrary::VSize(GetVelocity());
+	UE_LOG(LogTemp, Warning, TEXT("VelocityLength is - %f"), VelocityLength);
+
+	if(AxisX != 0 || AxisY != 0)
+	{
+		if( VelocityLength == 0 && IsRagdollActive)
+		{
+			GetUp();
+		}
+	}
+}
+
 void ACosmoSimCharacter::SetOrientRotationByController(const bool IsOrientByController)
 {
 	bUseControllerRotationYaw = IsOrientByController;
@@ -285,6 +332,8 @@ void ACosmoSimCharacter::MoveForward(float Value)
 {
 	MovementUnitVector2D.Y = Value;
 
+	GetUpWhenMove();
+	
 	if (Controller != nullptr)
 	{
 		if (IsTurboActive)
@@ -312,9 +361,11 @@ void ACosmoSimCharacter::MoveForward(float Value)
 void ACosmoSimCharacter::MoveRight(float Value)
 {
 	MovementUnitVector2D.X = Value;
-
+	
 	if (IsTurboActive) return;
 
+	GetUpWhenMove();
+	
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right

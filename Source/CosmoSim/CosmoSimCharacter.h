@@ -59,9 +59,24 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	UFUNCTION(BlueprintCallable)
+	void StartRagdoll();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void GetUp();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void SetGetUpAnimMontage();
+
+	UFUNCTION(BlueprintCallable)
+	void SetIsRagdollActive(const bool state) { IsRagdollActive = state; }
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D MovementUnitVector2D;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsRagdollActive;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool IsBoostActive;
 
@@ -93,11 +108,13 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	
 private:
 	void SetBoostModeActive(const bool State);
 	void SetTurboModeActive(const bool State);
 	void JumpBoostAction();
 	void TurboModeAction();
+	void GetUpWhenMove();
 
 	void SetOrientRotationByController(const bool IsOrientByController);
 
