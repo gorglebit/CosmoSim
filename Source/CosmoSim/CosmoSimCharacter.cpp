@@ -146,7 +146,28 @@ void ACosmoSimCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 void ACosmoSimCharacter::SetGetUpAnimMontage_Implementation()
 {
-	
+	if(IsRagdollActive)
+	{
+		FVector PelvisLocation = GetMesh()->GetSocketLocation("pelvis");
+		GetCapsuleComponent()->SetWorldLocation(PelvisLocation);
+		
+		FVector PelvisRightVector = UKismetMathLibrary::GetRightVector(GetMesh()->GetSocketRotation("pelvis"));
+		FVector Multi = {50, 50, 05};
+		FVector EndVector = PelvisLocation + (PelvisRightVector * Multi);
+		FHitResult OutHit;
+		FCollisionQueryParams Params;
+		
+		bool Hit = GetWorld()->LineTraceSingleByChannel(OutHit, PelvisLocation, EndVector, ECC_Visibility, Params);
+
+		if(Hit)
+		{
+			
+		}
+		else
+		{
+			
+		}
+	}
 }
 
 void ACosmoSimCharacter::GetUp_Implementation()
