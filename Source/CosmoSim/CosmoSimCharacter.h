@@ -76,6 +76,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void TurboModeAction();
+
+	UFUNCTION(BlueprintCallable)
+	void OffAllModes();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D MovementUnitVector2D;

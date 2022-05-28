@@ -199,13 +199,26 @@ void ACosmoSimCharacter::SetBoostModeActive(const bool State)
 	{
 		if(IsTurboActive)
 		{
-			SetTurboModeActive(false);
+			SetTurboModeActive(!State);
+
+			IsBoostActive = State;
+			SetOrientRotationByController(State);
+
+			MovementComponent->SetMovementMode(MOVE_Flying);
+
+			// MovementComponent->Velocity = {
+			// 	MovementComponent->Velocity.X / BoostBraking,
+			// 	MovementComponent->Velocity.Y / BoostBraking,
+			// 	0
+			// };
 		}
-		
-		if (MovementComponent->IsFalling() && !MovementComponent->IsFlying())
+
+		const bool IsFallingDebug = MovementComponent->IsFalling();
+		const bool IsFlyingDebug = MovementComponent->IsFlying();
+		if (IsFallingDebug && !IsFlyingDebug)
 		{
 			IsBoostActive = State;
-			SetOrientRotationByController(IsBoostActive);
+			SetOrientRotationByController(State);
 
 			MovementComponent->SetMovementMode(MOVE_Flying);
 
@@ -244,7 +257,7 @@ void ACosmoSimCharacter::SetTurboModeActive(const bool State)
 		SetOrientRotationByController(IsTurboActive);
 		
 		MovementComponent->SetMovementMode(MOVE_Flying);
-		MovementComponent->MaxFlySpeed = 800;
+		MovementComponent->MaxFlySpeed = 900;
 
 		UE_LOG(LogTemp, Warning, TEXT("Turbo is -  %i"), IsTurboActive);
 	}
@@ -262,7 +275,7 @@ void ACosmoSimCharacter::SetTurboModeActive(const bool State)
 
 void ACosmoSimCharacter::JumpBoostAction()
 {
-	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	const UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
 	if (!MovementComponent) return;
 
 	if (MovementComponent->IsWalking() && !MovementComponent->IsFalling())
@@ -294,6 +307,15 @@ void ACosmoSimCharacter::TurboModeAction()
 	{
 		SetTurboModeActive(true);
 	}
+}
+
+void ACosmoSimCharacter::OffAllModes()
+{
+	if(IsBoostActive)
+		SetBoostModeActive(false);
+
+	if(IsTurboActive)
+		SetTurboModeActive(false);
 }
 
 void ACosmoSimCharacter::GetUpWhenMove()
