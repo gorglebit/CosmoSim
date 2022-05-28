@@ -70,6 +70,12 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRagdollActive(const bool state) { IsRagdollActive = state; }
+
+	UFUNCTION(BlueprintCallable)
+	void JumpBoostAction();
+
+	UFUNCTION(BlueprintCallable)
+	void TurboModeAction();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D MovementUnitVector2D;
@@ -112,8 +118,7 @@ public:
 private:
 	void SetBoostModeActive(const bool State);
 	void SetTurboModeActive(const bool State);
-	void JumpBoostAction();
-	void TurboModeAction();
+
 	void GetUpWhenMove();
 
 	void SetOrientRotationByController(const bool IsOrientByController);
