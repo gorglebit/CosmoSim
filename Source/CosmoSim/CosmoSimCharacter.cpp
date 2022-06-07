@@ -370,6 +370,7 @@ void ACosmoSimCharacter::LookUpAtRate(float Rate)
 		// calculate delta for this frame from the rate information
 		AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 	}
+	AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 }
 
 void ACosmoSimCharacter::BeginPlay()
