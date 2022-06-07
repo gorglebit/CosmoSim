@@ -320,16 +320,15 @@ void ACosmoSimCharacter::OffAllModes()
 
 void ACosmoSimCharacter::GetUpWhenMove()
 {
-	float AxisY = GetInputAxisValue("Move Forward / Backward");
-
-	float AxisX = GetInputAxisValue("Move Right / Left");
+	const float AxisY = GetInputAxisValue("Move Forward / Backward");
+	const float AxisX = GetInputAxisValue("Move Right / Left");
 	
-	const float VelocityLength = UKismetMathLibrary::VSize(GetVelocity());
-	UE_LOG(LogTemp, Warning, TEXT("VelocityLength is - %f"), VelocityLength);
+	//const float VelocityLength = UKismetMathLibrary::VSize(GetVelocity());
+	//UE_LOG(LogTemp, Warning, TEXT("VelocityLength is - %f"), VelocityLength);
 
 	if(AxisX != 0 || AxisY != 0)
 	{
-		if( VelocityLength == 0 && IsRagdollActive)
+		if(IsRagdollActive)
 		{
 			GetUp();
 		}
@@ -354,14 +353,23 @@ void ACosmoSimCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Loc
 
 void ACosmoSimCharacter::TurnAtRate(float Rate)
 {
+	if(IsTurboActive)
+	{
+		Rate = Rate / 2;
+		AddControllerYawInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
+	}
 	// calculate delta for this frame from the rate information
 	AddControllerYawInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 }
 
 void ACosmoSimCharacter::LookUpAtRate(float Rate)
 {
-	// calculate delta for this frame from the rate information
-	AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
+	if(IsTurboActive)
+	{
+		Rate = Rate / 2;
+		// calculate delta for this frame from the rate information
+		AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void ACosmoSimCharacter::BeginPlay()
