@@ -355,7 +355,7 @@ void ACosmoSimCharacter::TurnAtRate(float Rate)
 {
 	if(IsTurboActive)
 	{
-		Rate = Rate / 2;
+		Rate = Rate / RightStickSens;
 		AddControllerYawInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 	}
 	// calculate delta for this frame from the rate information
@@ -366,7 +366,7 @@ void ACosmoSimCharacter::LookUpAtRate(float Rate)
 {
 	if(IsTurboActive)
 	{
-		Rate = Rate / 2;
+		Rate = Rate / RightStickSens;
 		// calculate delta for this frame from the rate information
 		AddControllerPitchInput(Rate * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
 	}

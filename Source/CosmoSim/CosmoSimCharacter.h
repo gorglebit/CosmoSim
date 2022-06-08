@@ -119,6 +119,7 @@ public:
 
 	
 private:
+	const float RightStickSens = 2.5;
 	void SetBoostModeActive(const bool State);
 	void SetTurboModeActive(const bool State);
 
